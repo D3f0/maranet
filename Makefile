@@ -77,6 +77,9 @@ servedocs: docs ## compile the docs watching for changes
 	watchmedo shell-command -p '*.rst' -c '$(MAKE) -C docs html' -R -D .
 
 release: clean ## package and upload a release
+	$(eval VERSION=$(shell python -c "import maranet; print(maranet.__version__)"))
+	$(eval COMMIT_MSG=$(shell git log -1 --pretty=%B))
+	git tag -a "v$(VERSION)" -m "$(COMMIT_MSG)"
 	python setup.py sdist upload
 	python setup.py bdist_wheel upload
 
