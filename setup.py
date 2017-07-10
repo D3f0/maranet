@@ -24,6 +24,7 @@ requirements = [
 
 setup_requirements = [
     'pytest-runner',
+    'wheel',
     # TODO(D3f0): put setup requirements (distutils extensions, etc.) here
 ]
 
@@ -34,9 +35,14 @@ test_requirements = [
     # TODO: put package test requirements here
 ]
 
+def get_version():
+    """Check code version"""
+    import maranet
+    return maranet.__version__
+
 setup(
     name='maranet',
-    version='1.0.1',
+    version=get_version(),
     description="A Python client library for MARA protocol. Includes server emulator, although MARA servers are tipically microcontrollers.",
     long_description=readme + '\n\n' + history,
     author="Nahuel Defossé",
@@ -59,12 +65,10 @@ setup(
         'License :: OSI Approved :: MIT License',
         'Natural Language :: English',
         "Programming Language :: Python :: 2",
-        'Programming Language :: Python :: 2.6',
         'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.3',
-        'Programming Language :: Python :: 3.4',
         'Programming Language :: Python :: 3.5',
+        'Programming Language :: Python :: 3.6',
     ],
     test_suite='tests',
     tests_require=test_requirements,
