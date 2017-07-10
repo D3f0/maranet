@@ -4,7 +4,7 @@ import sys
 import click
 from twisted.internet import reactor
 
-from maranet.mara.server import MaraServerFactory
+from maranet.protocols.server import MaraServerFactory
 
 
 @click.command()

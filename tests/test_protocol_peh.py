@@ -9,7 +9,7 @@ from twisted.test import proto_helpers
 from twisted.trial import unittest
 
 from maranet.constructs.structs import MaraFrame
-from maranet.mara.client import MaraClientProtocol, MaraPorotocolFactory
+from maranet.protocols.client import MaraClientProtocol, MaraPorotocolFactory
 
 from .mocks import COMasterMock
 

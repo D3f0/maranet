@@ -1,6 +1,8 @@
 '''
 Poll UC directly
-Show how to make direct poll of COMaster
+Show how to make direct poll of COMaster.
+This was part of txscada and rarely used, just to check something
+if twisted autamatas get broken somehow.
 '''
 
 import click
@@ -93,13 +95,3 @@ def direct_poll(port, host, interval, log, dis, ais, svs, evts):
         output.sequence += 1
         if output.sequence > constants.sequence.MAX.value:
             output.sequence = constants.sequence.MIN.value
-
-@click.command()
-@click.option('--port', default=9761)
-@click.option('--host', default='127.0.0.1')
-@click.option('--interval', default=1, type=float)
-def client(port, host, interval):
-    """
-    Twisted based client
-    """
-    pass

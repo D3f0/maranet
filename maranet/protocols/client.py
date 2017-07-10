@@ -4,6 +4,9 @@ It takes advantage of Twisted's inlineCallbacks
 http://hackedbellini.org/development/writing-asynchronous-python-code-with-twisted-using-inlinecallbacks/
 Features some basic reassembler if data comes chunked.
 """
+
+# TODO: Rewrite using automat library
+
 from __future__ import print_function
 
 import datetime

@@ -1,7 +1,7 @@
 import logging
 from cStringIO import StringIO
 from .mocks import COMasterMock
-from maranet.mara.client.log_adapter import COMasterLogAdapter
+from maranet.protocols.loggers import COMasterLogAdapter
 import unittest
 
 
