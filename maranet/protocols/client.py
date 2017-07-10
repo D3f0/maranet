@@ -22,8 +22,8 @@ from maranet.constants import sequence, commands
 from construct import Container, FieldError
 
 from maranet.utils.formatters import upperhexstr
-from .log_adapter import COMasterLogAdapter
-from buffer import MaraFrameReassembler
+from .loggers import COMasterLogAdapter
+from ..utils.buffered_frame import MaraFrameReassembler
 
 i2hex = lambda i: ('%.2x' % i).upper()
 
@@ -185,6 +185,7 @@ class MaraClientProtocol(object, protocol.Protocol, TimeoutMixin):
         """Flag that checks if the main loop can be executed"""
         return self.state not in (self.States.CONNECTION_LOST, self.States.GAVE_UP)
 
+    # TODO: Refactor this code to be more testable
     @defer.inlineCallbacks
     def mainLoop(self):
         """
