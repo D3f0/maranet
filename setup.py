@@ -29,6 +29,8 @@ setup_requirements = [
 
 test_requirements = [
     'pytest',
+    'pdbpp',
+    'mock'
     # TODO: put package test requirements here
 ]
 
