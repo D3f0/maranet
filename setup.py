@@ -12,10 +12,14 @@ with open('HISTORY.rst') as history_file:
     history = history_file.read()
 
 requirements = [
-    'Click>=6.0',
+    # Network lib
     'twisted',
+    # Binary to Python objects and back
     'construct<=2.5.0',
-
+    # Formats output of large events for human readable dumps
+    'jinja2',
+    # This is a Python lib
+    'Click>=6.0',
 ]
 
 setup_requirements = [
@@ -39,7 +43,7 @@ setup(
     packages=find_packages(include=['maranet']),
     entry_points={
         'console_scripts': [
-            'maranet=maranet.cli:main'
+            'maranet=maranet.cli:cli'
         ]
     },
     include_package_data=True,
