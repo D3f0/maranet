@@ -5,17 +5,20 @@ http://hackedbellini.org/development/writing-asynchronous-python-code-with-twist
 Features some basic reassembler if data comes chunked.
 """
 from __future__ import print_function
+
+import datetime
+import logging
+
 from twisted.internet import protocol
 from twisted.internet import defer, reactor
 from twisted.python.constants import Names, NamedConstant
 from twisted.internet import threads
 from twisted.protocols.policies import TimeoutMixin
-from apps.mara.utils import get_setting, import_class
-from protocols.constants import sequence, commands
+from maranet.utils.compat import get_setting, import_class
+from maranet.constants import sequence, commands
 from construct import Container, FieldError
-import datetime
-import logging
-from protocols.constructs.structs import upperhexstr
+
+from maranet.utils.formatters import upperhexstr
 from .log_adapter import COMasterLogAdapter
 from buffer import MaraFrameReassembler
 
@@ -25,6 +28,7 @@ __all__ = ('MaraPorotocolFactory', 'MaraClientProtocol')
 
 LOGGER_NAME = 'commands'
 
+logger = logging.getLogger(LOGGER_NAME)
 
 class MaraPorotocolFactory(protocol.ReconnectingClientFactory):
 
@@ -40,20 +44,21 @@ class MaraPorotocolFactory(protocol.ReconnectingClientFactory):
         self.handlers = []
         logger = logging.getLogger(LOGGER_NAME)
         # This adapter prints the IP of the comaster with every log message
-        self.logger = COMasterLogAdapter(logger, {'comaster': self.comaster})
+        logger = COMasterLogAdapter(logger, {'comaster': self.comaster})
         self.attemps = 0
 
+    DEFAULT_MARA_CONSTRUCT = 'maranet.constructs.MaraFrame'
     def get_configured_construct(self):
         """
         Takes from configuration the path to the ConsturctClass
         """
-        class_ = import_class(get_setting('MARA_CONSTRUCT'))
+        class_ = import_class(get_setting('MARA_CONSTRUCT', self.DEFAULT_MARA_CONSTRUCT))
         return class_
 
+    DEFAULT_MARA_CLIENT_PROTOCOL = 'maranet.mara.client.protocol.MaraClientProtocol'
     def get_configured_protocol(self):
         try:
-            class_name = get_setting('MARA_CLIENT_PROTOCOL',
-                                     'protocols.mara.client.protocol.MaraClientProtocol')
+            class_name = get_setting('MARA_CLIENT_PROTOCOL', self.DEFAULT_MARA_CLIENT_PROTOCOL)
             class_ = import_class(class_name)
         except ImportError:
             class_ = MaraClientProtocol
@@ -71,7 +76,7 @@ class MaraPorotocolFactory(protocol.ReconnectingClientFactory):
         instance = protocol_class()
         instance.construct = self.get_configured_construct()
         instance.factory = self
-        instance.logger = self.logger  # Share the same logger (associates with comaster)
+        instance.logger = logger  # Share the same logger (associates with comaster)
         return instance
 
     def connectTCP(self, reactor, override_ip=None):
@@ -92,7 +97,7 @@ class MaraPorotocolFactory(protocol.ReconnectingClientFactory):
         Twisted event handler. Logging purpouses.
         """
         protocol.ReconnectingClientFactory.startedConnecting(self, connector)
-        self.logger.info("Connecting to %s...", connector.getDestination())
+        logger.info("Connecting to %s...", connector.getDestination())
 
     def clientConnectionFailed(self, connector, reason):
         """
@@ -101,7 +106,7 @@ class MaraPorotocolFactory(protocol.ReconnectingClientFactory):
         self.attemps += 1
         protocol.ReconnectingClientFactory.clientConnectionFailed(self, connector, reason)
         msg = unicode(reason).replace('\n', ' ')
-        self.logger.warning("Connection failed: %s (# %d/%s)",
+        logger.warning("Connection failed: %s (# %d/%s)",
                             msg, self.attemps, self.maxRetries or 'oo')
 
 
@@ -142,17 +147,17 @@ class MaraClientProtocol(object, protocol.Protocol, TimeoutMixin):
     @state.setter
     def state(self, new_state):
         assert new_state in self.States.iterconstants(), "Invalid state %s" % new_state
-        # self.logger.info("State change %s -> %s", self._state, new_state)
+        # logger.info("State change %s -> %s", self._state, new_state)
         self._state = new_state
 
-    def sendCotainer(self, container):
+    def sendContainer(self, container):
         """
         Convenience method for publishing when data is sent
         """
         # TODO: Publish COMASTER, STATE, DATA
         assert isinstance(container, Container)
         data = self.construct.build(container)
-        self.logger.info("%s >> %s", self.state, upperhexstr(data))
+        logger.info("%s >> %s", self.state, upperhexstr(data))
         self.transport.write(data)
 
     @property
@@ -180,8 +185,8 @@ class MaraClientProtocol(object, protocol.Protocol, TimeoutMixin):
     @defer.inlineCallbacks
     def mainLoop(self):
         """
-        Main loop that executes the comunication. It tries to interleave every
-        resposability the reactor has.
+        Main loop that executes the communication. It tries to interleave every
+        responsibility the reactor has.
         """
         while self.active:
             yield self.doPEH()
@@ -272,28 +277,27 @@ class MaraClientProtocol(object, protocol.Protocol, TimeoutMixin):
 
             # If it's not the first try, log it
             if tries:
-                self.logger.debug("Retry: %s", tries)
+                logger.debug("Retry: %s", tries)
 
-            self.sendCotainer(self.buildPollContainer())
+            self.sendContainer(self.buildPollContainer())
             try:
                 _str, package = yield self.incomingDefered
                 self.setTimeout(None)
                 try:
                     yield threads.deferToThread(self.packageReceived, package)
-                    self.logger.info("Saved, next poll SEQ: %s",
-                                     i2hex(self.comaster.sequence))
+                    logger.info("Saved, next poll SEQ: %s", i2hex(self.comaster.sequence))
                 except Exception:
-                    self.logger.exception("Package may be lost por partially saved:")
+                    logger.exception("Package may be lost por partially saved:")
 
                 defer.returnValue(True)  # Return True so sleep is performed
 
-            except FieldError, e:
-                self.logger.warning("Construct error: %s", e)
+            except FieldError as e:
+                logger.warning("Construct error: %s", e)
             except Timeout:
                 tries += 1
                 if tries > max_tries:
                     self.state = self.States.GAVE_UP
-                    self.logger.critical("Giving up POLL response. Retry exceeded!")
+                    logger.critical("Giving up POLL response. Retry exceeded!")
                     defer.returnValue(False)
 
             except ConnectionLost:
@@ -310,20 +314,20 @@ class MaraClientProtocol(object, protocol.Protocol, TimeoutMixin):
         :returns: True if the package is accepted. False otherwise, failures are logged.
         """
         if self.comaster.sequence != package.sequence:
-            self.logger.warning("Expected sequence %s received %s",
+            logger.warning("Expected sequence %s received %s",
                                 i2hex(self.comaster.sequence),
                                 i2hex(package.sequence))
         if package.dest != self.comaster.rs485_source:
-            self.logger.warning("Wrong adddress: %s instead of %s",
+            logger.warning("Wrong adddress: %s instead of %s",
                                 package.dest,
                                 self.comaster.rs485_source)
             return False
 
         if package.payload_10 is None:
-            self.logger.warning("Payload missing.")
+            logger.warning("Payload missing.")
             return False
 
-        self.comaster.process_frame(package, logger=self.logger)
+        self.comaster.process_frame(package, logger=logger)
         self.comaster.next_sequence(package.sequence)
         return True
 
@@ -344,7 +348,7 @@ class MaraClientProtocol(object, protocol.Protocol, TimeoutMixin):
         if self.comaster.needs_peh():
             self.state = self.States.SEND_PEH
             timestamp = datetime.datetime.now()
-            self.sendCotainer(self.buildPeHContainer(timestamp))
+            self.sendContainer(self.buildPeHContainer(timestamp))
             yield threads.deferToThread(self.comaster.update_last_peh, timestamp)
         yield defer.returnValue(None)
 
@@ -353,7 +357,7 @@ class MaraClientProtocol(object, protocol.Protocol, TimeoutMixin):
         Called when data is available. It'll callback the Deferred that are waiting
         for input if it can reasseble a mara frame.
         """
-        self.logger.info("%s << %s", self.state, upperhexstr(data))
+        logger.info("%s << %s", self.state, upperhexstr(data))
         # Add data that could be chunked to the buffer
         self.input_buffer += data
         # If a package is ready (has SOF, QTY, ...) then it must be
@@ -369,7 +373,7 @@ class MaraClientProtocol(object, protocol.Protocol, TimeoutMixin):
                     self.incomingDefered.callback((raw_package_data, parsed))
             else:
                 package = self.input_buffer.get_package()
-                self.logger.info("Unexpected package %s", upperhexstr(package))
+                logger.info("Unexpected package %s", upperhexstr(package))
 
     def timeoutConnection(self):
         """
@@ -383,7 +387,7 @@ class MaraClientProtocol(object, protocol.Protocol, TimeoutMixin):
         """
         Called when connection is lost. errbacks the incoming Deferreds.
         """
-        self.logger.warning("Connection lost in %s reason: %s", self.state, reason)
+        logger.warning("Connection lost in %s reason: %s", self.state, reason)
         self.state = self.States.CONNECTION_LOST
         self.setTimeout(None)
         if not self.incomingDefered.called:

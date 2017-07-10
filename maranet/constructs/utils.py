@@ -1,6 +1,7 @@
 from __future__ import print_function
 import re
 import datetime
+
 from maranet.utils.checksum import make_cs_bigendian
 from construct import (
     Container,
@@ -8,8 +9,8 @@ from construct import (
     Byte,
     UBInt8,
 )
-from structs import MaraFrame
-import jinja2
+from maranet.constructs import MaraFrame
+from jinja2 import Template
 
 
 def ints2buffer(hexstr):
@@ -33,11 +34,6 @@ def any2buffer(data):
     elif isinstance(data, basestring):
         return hexstr2buffer(data)
     raise Exception("%s can't be converted to string buffer")
-
-
-def upperhexstr(buff):
-    """Buffer -> Upper Human Readable Hex String"""
-    return ' '.join([("%.2x" % ord(c)).upper() for c in buff])
 
 
 def dtime2dict(dtime=None):
@@ -97,11 +93,11 @@ frame_template = Template("""\
     AIS:        {{p.ais}}
     CANEVS:     {{p.canevs}}, Elementos de 10 bytes {{p.canevs / 10}}
     {% for ev in p.event %}\
-    {% if event.type == "DIGITAL" %}\
-    {% elif event.type == "ENERGY" %}\
-    {% endif %}\
+        {% if event.type == "DIGITAL" %}\
+        {% elif event.type == "ENERGY" %}\
+        {% endif %}\
     {% endfor %}\
-{% endfor %}\
+{% endif %}\
 {% if show_bcc %}\
     BCC: {{ d.bcc }}
 {% endif %}\
@@ -133,30 +129,32 @@ def format_frame(buff, as_hex_string=False, show_header=True, show_bcc=True):
         print("%12s" % "DIS:", p.dis)
         print("%12s" % "CANAIS:", p.candis, "%d valores de word de 16" % (p.canais / 2))
         print("%12s" % "AIS:", p.ais)
-        # Eventos
-        print "%12s" % "CANEVS:", p.canevs, "%d cada evento ocupa 10 bytes" % (p.canevs / 10)
-        for ev in p.event:
-            if ev.evtype == "DIGITAL":
-                print '\t',
-                print "DIGITAL",
-                print "Q:", ev.q,
-                print "ADDR485", ev.addr485,
-                print "BIT: %2d" % ev.bit,
-                print "PORT:", ev.port,
-                print "STATUS:", ev.status,
-                print "%d/%d/%d %2d:%.2d:%2.2f" % (ev.year + 2000, ev.month, ev.day, ev.hour,
-                                                   ev.minute, ev.second + ev.fraction)
-                # print "%.2f" % ev.subsec
+        # Events
 
-            elif ev.evtype == "ENERGY":
-                print "\t",
-                print "ENERGY Q: %d" % ev.q,
-                print "ADDR485: %d" % ev.q, ev.addr485,
-                print "CHANNEL: %d" % ev.channel,
-                print "%d/%d/%d %2d:%.2d:%.2d" % (ev.year + 2000, ev.month, ev.day, ev.hour, ev.minute, ev.second),
-                print "Value: %d Q: %d" % (ev.value.val, ev.value.q)
-            else:
-                print "Tipo de evento no reconocido"
+        # TODO: Move this to Jinja
+        # print "%12s" % "CANEVS:", p.canevs, "%d cada evento ocupa 10 bytes" % (p.canevs / 10)
+        # for ev in p.event:
+        #     if ev.evtype == "DIGITAL":
+        #         print ('\t',)
+        #         print ("DIGITAL",)
+        #         print ("Q:", ev.q,)
+        #         print ("ADDR485", ev.addr485,)
+        #         print ("BIT: %2d" % ev.bit,)
+        #         print ("PORT:", ev.port,)
+        #         print ("STATUS:", ev.status,)
+        #         print ("%d/%d/%d %2d:%.2d:%2.2f" % (ev.year + 2000, ev.month, ev.day, ev.hour,
+        #                                            ev.minute, ev.second + ev.fraction))
+        #         # print "%.2f" % ev.subsec
+
+        #     elif ev.evtype == "ENERGY":
+        #         print "\t",
+        #         print "ENERGY Q: %d" % ev.q,
+        #         print "ADDR485: %d" % ev.q, ev.addr485,
+        #         print "CHANNEL: %d" % ev.channel,
+        #         print "%d/%d/%d %2d:%.2d:%.2d" % (ev.year + 2000, ev.month, ev.day, ev.hour, ev.minute, ev.second),
+        #         print "Value: %d Q: %d" % (ev.value.val, ev.value.q)
+        #     else:
+        #         print "Tipo de evento no reconocido"
 
     if show_bcc:
-        print "BCC:", d.bcc
+        print("BCC:", d.bcc)

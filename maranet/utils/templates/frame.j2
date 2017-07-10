@@ -1,0 +1,26 @@
+{%- if show_header %}
+SOF: {{ frame.sof|upperhex  }}
+LEN: {{ frame.length|upperhex }}
+DST: {{ frame.dest|upperhex }} ({{frame.dest}})
+SRC: {{ frame.source }}
+SEQ: {{ frame.sequence|upperhex }} ({{frame.sequence}})
+CMD: {{ frame.command|upperhex }} ({{ frame.command }})
+{%- endif -%}
+{%- if frame.payload_10 -%}
+    {%- if show_sv -%}
+    {%- for sv in  frame.payload_10.varsys %}
+    - SV({{loop.index}}): {{sv|upperhex}} ({{sv}})
+    {%-endfor%}
+    {%- endif %}
+    {%- if show_di -%}
+    {%- for di in  frame.payload_10.dis %}
+    - DI({{loop.index}}): {{di|upperhex}} ({{di}})
+    {%-endfor%}
+    {%-endif-%}
+    {%- for ai in  frame.payload_10.ais %}
+    - AI({{loop.index}}): {{ai|upperhex}} ({{ai}})
+    {%-endfor%}
+{%- endif %}
+{% if True -%}
+BCC: {{ frame.bcc }}
+{%- endif -%}

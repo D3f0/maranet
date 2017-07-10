@@ -27,7 +27,6 @@ from maranet.utils.checksum import make_cs_bigendian
 from maranet.constants import frame, sequence
 from operator import add
 from struct import pack
-from .utils import format_frame
 
 # ==============================================================================
 # Mara protocol SubConstructs
@@ -319,11 +318,12 @@ class BaseMaraStruct(Struct):
         stream.seek(length - 2)  # Go to BCC position
         stream.write(Array(2, ULInt8('foo')).build(cs))
 
-    @classmethod
-    def pretty_print(cls, container, show_header=True, show_bcc=True):
-        '''Pretty printing'''
-        format_frame(container, as_hex_string=False, show_header=show_header,
-                     show_bcc=show_bcc)
+    # TODO: Remove this code to prevent circular imports
+    # @classmethod
+    # def pretty_print(cls, container, show_header=True, show_bcc=True):
+    #     '''Pretty printing'''
+    #     format_frame(container, as_hex_string=False, show_header=show_header,
+    #                  show_bcc=show_bcc)
 
 
 MaraFrame = BaseMaraStruct(
